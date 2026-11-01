@@ -94,3 +94,48 @@ exports.deleteMiembro = (req, res, next) => {
         res.status(200).json({ ok: true, mensaje: 'Miembro eliminado correctamente' });
     });
 };
+
+// Junta las filas del JOIN (una por miembro y clase) en un objeto por miembro con su lista de clases.
+const agruparPorMiembro = (filas) => {
+    const miembros = new Map();
+    filas.forEach((f) => {
+        if (!miembros.has(f.id_miembro)) {
+            miembros.set(f.id_miembro, {
+                id_miembro: f.id_miembro,
+                documento: f.documento,
+                nombre: f.nombre,
+                apellido: f.apellido,
+                correo: f.correo,
+                telefono: f.telefono,
+                fecha_registro: f.fecha_registro,
+                estado: f.estado,
+                plan: {
+                    nombre: f.plan,
+                    descripcion: f.plan_descripcion,
+                    duracion_dias: f.duracion_dias,
+                    precio: f.precio
+                },
+                clases: []
+            });
+        }
+        miembros.get(f.id_miembro).clases.push({
+            clase: f.clase,
+            dia_semana: f.dia_semana,
+            hora_inicio: f.hora_inicio,
+            entrenador: f.entrenador,
+            especialidad: f.especialidad,
+            fecha_inscripcion: f.fecha_inscripcion
+        });
+    });
+    return Array.from(miembros.values());
+};
+
+// GET /api/miembros/detalle  (opcional: ?nombre=juan)
+exports.getMiembrosDetalle = (req, res, next) => {
+    const nombre = req.query.nombre ? String(req.query.nombre).trim() : '';
+    Miembro.getDetalle(nombre, (err, filas) => {
+        if (err) return next(err);
+        const data = agruparPorMiembro(filas);
+        res.status(200).json({ ok: true, total: data.length, data });
+    });
+};
